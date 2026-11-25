@@ -1,0 +1,28 @@
+# Собирает userspace-компоненты AmneziaWG для macOS и публикует их в релиз components-v1
+name: components
+on: workflow_dispatch
+permissions: { contents: write }
+jobs:
+  macos:
+    strategy:
+      matrix:
+        include:
+          - { os: macos-14, arch: arm64 }
+          - { os: macos-13, arch: x86_64 }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/setup-go@v5
+        with: { go-version: stable }
+      - run: |
+          git clone --depth 1 https://github.com/amnezia-vpn/amneziawg-go
+          git clone --depth 1 https://github.com/amnezia-vpn/amneziawg-tools
+          (cd amneziawg-go && make)
+          (cd amneziawg-tools/src && make)
+          mkdir out
+          cp amneziawg-go/amneziawg-go out/
+          cp amneziawg-tools/src/awg out/
+          tar -C out -czf amneziawg-macos-${{ matrix.arch }}.tar.gz .
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: components-v1
+          files: amneziawg-macos-*.tar.gz

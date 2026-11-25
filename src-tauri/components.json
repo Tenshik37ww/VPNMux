@@ -1,0 +1,26 @@
+{
+ "components": {
+  "hysteria": {
+   "windows-x86_64": {"url": "https://download.hysteria.network/app/latest/hysteria-windows-amd64.exe", "hashes_url": "https://download.hysteria.network/app/latest/hashes.txt", "hash_name": "hysteria-windows-amd64.exe", "kind": "bin", "bin": "hysteria.exe"},
+   "windows-aarch64": {"url": "https://download.hysteria.network/app/latest/hysteria-windows-arm64.exe", "hashes_url": "https://download.hysteria.network/app/latest/hashes.txt", "hash_name": "hysteria-windows-arm64.exe", "kind": "bin", "bin": "hysteria.exe"},
+   "macos-x86_64": {"url": "https://download.hysteria.network/app/latest/hysteria-darwin-amd64", "hashes_url": "https://download.hysteria.network/app/latest/hashes.txt", "hash_name": "hysteria-darwin-amd64", "kind": "bin", "bin": "hysteria"},
+   "macos-aarch64": {"url": "https://download.hysteria.network/app/latest/hysteria-darwin-arm64", "hashes_url": "https://download.hysteria.network/app/latest/hashes.txt", "hash_name": "hysteria-darwin-arm64", "kind": "bin", "bin": "hysteria"},
+   "linux-x86_64": {"url": "https://download.hysteria.network/app/latest/hysteria-linux-amd64", "hashes_url": "https://download.hysteria.network/app/latest/hashes.txt", "hash_name": "hysteria-linux-amd64", "kind": "bin", "bin": "hysteria"},
+   "linux-aarch64": {"url": "https://download.hysteria.network/app/latest/hysteria-linux-arm64", "hashes_url": "https://download.hysteria.network/app/latest/hashes.txt", "hash_name": "hysteria-linux-arm64", "kind": "bin", "bin": "hysteria"}
+  },
+  "wintun": {
+   "windows-x86_64": {"url": "https://www.wintun.net/builds/wintun-0.14.1.zip", "sha256": "07c256185d6ee3652e09fa55c0b673e2624b565e02c4b9091c79ca7d2f24ef51", "kind": "zip", "files": {"wintun/bin/amd64/wintun.dll": "wintun.dll"}, "bin": "wintun.dll"},
+   "windows-aarch64": {"url": "https://www.wintun.net/builds/wintun-0.14.1.zip", "sha256": "07c256185d6ee3652e09fa55c0b673e2624b565e02c4b9091c79ca7d2f24ef51", "kind": "zip", "files": {"wintun/bin/arm64/wintun.dll": "wintun.dll"}, "bin": "wintun.dll"}
+  },
+  "amneziawg": {
+   "windows-x86_64": {"github": {"repo": "amnezia-vpn/amneziawg-windows-client", "asset": "amneziawg-amd64-.*\\.msi"}, "kind": "msi", "bin": "%ProgramFiles%\\AmneziaWG\\amneziawg.exe"},
+   "windows-aarch64": {"github": {"repo": "amnezia-vpn/amneziawg-windows-client", "asset": "amneziawg-arm64-.*\\.msi"}, "kind": "msi", "bin": "%ProgramFiles%\\AmneziaWG\\amneziawg.exe"},
+   "macos-aarch64": {"github": {"repo": "Tenshik37ww/VPNMux", "tag": "components-v1", "asset": "amneziawg-macos-arm64\\.tar\\.gz"}, "kind": "tgz", "files": {"amneziawg-go": "amneziawg-go", "awg": "awg"}, "bin": "amneziawg-go"},
+   "macos-x86_64": {"github": {"repo": "Tenshik37ww/VPNMux", "tag": "components-v1", "asset": "amneziawg-macos-x86_64\\.tar\\.gz"}, "kind": "tgz", "files": {"amneziawg-go": "amneziawg-go", "awg": "awg"}, "bin": "amneziawg-go"}
+  },
+  "openvpn": {
+   "windows-x86_64": {"url": "https://swupdate.openvpn.org/community/releases/OpenVPN-2.6.14-I001-amd64.msi", "sha256": "", "kind": "msi", "bin": "%ProgramFiles%\\OpenVPN\\bin\\openvpn.exe"},
+   "windows-aarch64": {"url": "https://swupdate.openvpn.org/community/releases/OpenVPN-2.6.14-I001-arm64.msi", "sha256": "", "kind": "msi", "bin": "%ProgramFiles%\\OpenVPN\\bin\\openvpn.exe"}
+  }
+ }
+}

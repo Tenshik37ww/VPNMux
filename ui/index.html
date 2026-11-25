@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>vpnmux</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap">
+<style>
+:root{--bg1:#a7bac7;--bg2:#e6eef3;--glass:rgba(255,255,255,.42);--glass2:rgba(255,255,255,.72);--ink:#141a2e;--mut:#5d6b7c;--line:rgba(255,255,255,.75);--sh:0 12px 32px rgba(40,62,84,.15);--ac:#12172b;--onac:#fff;--blur:24px;--r:22px;color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg1:#0e1520;--bg2:#1d2c3e;--glass:rgba(255,255,255,.07);--glass2:rgba(255,255,255,.13);--ink:#e8eef5;--mut:#93a1b3;--line:rgba(255,255,255,.15);--sh:0 12px 32px rgba(0,0,0,.35);color-scheme:dark}}
+:root[data-theme=dark]{--bg1:#0e1520;--bg2:#1d2c3e;--glass:rgba(255,255,255,.07);--glass2:rgba(255,255,255,.13);--ink:#e8eef5;--mut:#93a1b3;--line:rgba(255,255,255,.15);--sh:0 12px 32px rgba(0,0,0,.35);color-scheme:dark}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{font:500 14px/1.4 Manrope,system-ui,sans-serif;color:var(--ink);background:linear-gradient(135deg,var(--bg1),var(--bg2));padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0);overflow:hidden}
+button,textarea,input{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none}
+:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.g{background:var(--glass);backdrop-filter:blur(var(--blur)) saturate(1.4);-webkit-backdrop-filter:blur(var(--blur)) saturate(1.4);border:1px solid var(--line);box-shadow:var(--sh),inset 0 1px 0 var(--line);border-radius:var(--r)}
+svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+/* nav */
+nav{position:fixed;z-index:20;display:flex;gap:6px;padding:8px;left:16px;top:50%;transform:translateY(-50%);flex-direction:column;transition:all .5s cubic-bezier(.3,1.2,.4,1)}
+nav.bottom{left:50%;top:auto;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);flex-direction:row}
+nav button{position:relative;z-index:1;width:46px;height:46px;border-radius:calc(var(--r)*.65);display:grid;place-items:center;color:var(--mut);transition:color .25s}
+nav button.on{color:var(--onac)}
+#ind{position:absolute;z-index:0;background:var(--ac);border-radius:calc(var(--r)*.65);width:46px;height:46px;transition:transform .45s cubic-bezier(.3,1.3,.4,1);box-shadow:0 6px 16px rgba(0,0,0,.25)}
+/* layout */
+main{height:100%;padding:20px 24px 24px 92px;display:grid;grid-template-columns:minmax(300px,380px) 1fr;grid-template-rows:auto 1fr;gap:16px 20px;max-width:1200px;margin:auto}
+main.bottom{padding:20px 24px 96px}
+header{grid-column:1/-1;color:var(--mut);font-size:15px;padding-left:4px}
+header b{color:var(--ink);font-weight:700}
+section{padding:22px;overflow:auto;min-height:0}
+h2{font-size:19px;font-weight:600;margin-bottom:16px}
+.row{display:flex;align-items:center;gap:10px}
+.flt{width:100%;padding:11px 12px;border-radius:calc(var(--r)*.6);color:var(--ink);text-align:left;transition:background .25s}
+.flt.on{background:var(--glass2);box-shadow:var(--sh)}
+.cnt{margin-left:auto;background:var(--glass2);border-radius:7px;padding:1px 8px;font-size:12px}
+.card{margin-top:14px;padding:18px;background:var(--glass2);border-radius:var(--r);box-shadow:var(--sh);border:1px solid var(--line)}
+.dial{display:flex;gap:18px;align-items:center}
+.dial svg{width:132px;height:132px;flex:none}
+#hand{transform-origin:70px 70px;animation:spin 60s linear infinite;animation-play-state:paused;opacity:0;transition:opacity .4s}
+.up #hand{animation-play-state:running;opacity:1}
+.ring{fill:none;stroke:var(--ac);stroke-width:3;stroke-linecap:round;stroke-dasharray:440;stroke-dashoffset:440;transition:stroke-dashoffset 1s ease}
+.up .ring{stroke-dashoffset:0}
+.busy .ring{stroke-dasharray:90 350;stroke-dashoffset:0;transform-origin:70px 70px;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.t{font-size:26px;font-weight:700;font-variant-numeric:tabular-nums}
+.mut{color:var(--mut);font-size:13px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 18px;border-radius:calc(var(--r)*.7);background:var(--ac);color:var(--onac);font-weight:600;transition:transform .2s,filter .2s}
+.btn:hover{filter:brightness(1.15)}.btn:active{transform:scale(.96)}
+.btn.s{background:var(--glass2);color:var(--ink);border:1px solid var(--line)}
+.bars{display:flex;gap:8px;align-items:flex-end;height:90px;margin-top:10px}
+.bars i{flex:1;background:var(--glass2);border-radius:8px;height:var(--h);transform-origin:bottom;animation:grow .8s cubic-bezier(.3,1.2,.4,1) both;animation-delay:calc(var(--n)*70ms + .4s)}
+.bars i.me{background:var(--ac)}
+@keyframes grow{from{transform:scaleY(.05)}}
+.drop{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:calc(var(--r)*.7);border:1.5px dashed var(--line);background:var(--glass);margin-bottom:18px;transition:all .25s}
+.drop.over{border-color:var(--ac);transform:scale(1.015);background:var(--glass2)}
+.drop span{flex:1;color:var(--mut)}
+.p{display:flex;align-items:center;gap:12px;padding:12px 14px;margin-bottom:8px;border-radius:calc(var(--r)*.7);background:var(--glass2);border:1px solid var(--line);animation:pin .5s cubic-bezier(.3,1.3,.4,1) both;cursor:pointer;transition:box-shadow .25s,transform .25s}
+.p:hover{transform:translateX(3px)}
+.p.sel{box-shadow:0 0 0 2px var(--ac)}
+@keyframes pin{from{opacity:0;transform:scale(.92) translateY(8px)}}
+.tag{padding:3px 9px;border-radius:8px;background:var(--glass);border:1px solid var(--line);font-weight:700;font-size:12px}
+.p .nm{font-weight:600}.p .grow{flex:1;min-width:0}.p .grow *{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dot{width:9px;height:9px;border-radius:50%;background:#2fb67c;box-shadow:0 0 0 0 #2fb67c;animation:pl 1.6s infinite}
+@keyframes pl{70%{box-shadow:0 0 0 9px transparent}}
+.ib{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:var(--mut)}
+.ib:hover{background:var(--glass);color:var(--ink)}
+.empty{text-align:center;color:var(--mut);padding:28px 0}
+.gl{position:relative;aspect-ratio:1;width:100%;max-width:340px;margin:0 auto 6px;cursor:grab;touch-action:none}
+.gl canvas{width:100%;height:100%;display:block}
+.pm{position:relative;z-index:12}
+.pm>button{width:100%;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:calc(var(--r)*.7);background:var(--glass2);border:1px solid var(--line);box-shadow:var(--sh);text-align:left}
+.pm>button b{flex:1;font-weight:600}
+.chev{transition:transform .3s}.pm.open .chev{transform:rotate(180deg)}
+.pmenu{position:absolute;left:0;right:0;top:calc(100% + 8px);padding:6px;opacity:0;transform:translateY(-8px) scale(.97);pointer-events:none;transition:all .25s cubic-bezier(.3,1.3,.4,1)}
+.pm.open .pmenu{opacity:1;transform:none;pointer-events:auto}
+.pmenu button{display:flex;width:100%;align-items:center;gap:10px;padding:10px 12px;border-radius:calc(var(--r)*.55);text-align:left}
+.pmenu button:hover,.pmenu button.on{background:var(--glass2)}
+.pmenu small{display:block;color:var(--mut);font-size:12px;font-weight:500}
+.bar{height:4px;border-radius:2px;background:var(--glass);overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;width:var(--p,0%);background:var(--ac);transition:width .3s}
+.pane{display:none}.pane.on{display:block}
+.in{width:100%;padding:11px 12px;border-radius:12px;border:1px solid var(--line);background:var(--glass);margin-bottom:8px}
+.place{font-weight:600;font-size:16px;text-align:center}
+.card .t{text-align:center}
+.card .mut{text-align:center}
+/* drawer + dialog */
+#dr{position:fixed;z-index:30;top:16px;right:16px;bottom:16px;width:min(330px,calc(100% - 32px));padding:22px;overflow:auto;transform:translateX(120%);transition:transform .5s cubic-bezier(.3,1.1,.4,1)}
+#dr.open{transform:none}
+.f{margin:14px 0}.f label{display:flex;justify-content:space-between;margin-bottom:6px;color:var(--mut);font-size:13px}
+.sw{display:flex;gap:8px}.sw button{width:30px;height:30px;border-radius:50%;background:var(--c);border:2px solid var(--line);transition:transform .2s}
+.sw button.on{transform:scale(1.2);box-shadow:0 0 0 2px var(--ink)}
+.seg{display:flex;padding:3px;border-radius:12px;background:var(--glass)}
+.seg button{flex:1;padding:7px;border-radius:9px}.seg .on{background:var(--ac);color:var(--onac)}
+input[type=range]{width:100%;accent-color:var(--ac)}
+dialog{margin:auto;width:min(560px,calc(100% - 32px));padding:22px;color:var(--ink);border:1px solid var(--line)}
+dialog::backdrop{background:rgba(10,20,35,.35);backdrop-filter:blur(4px)}
+dialog[open]{animation:pin .4s cubic-bezier(.3,1.3,.4,1)}
+textarea{width:100%;height:230px;resize:vertical;padding:12px;border-radius:14px;border:1px solid var(--line);background:var(--glass);font:12px/1.5 ui-monospace,Menlo,monospace}
+.err{color:#d0463b;min-height:20px;margin:8px 0;font-size:13px}
+#toast{position:fixed;z-index:40;left:50%;bottom:90px;transform:translate(-50%,30px);opacity:0;padding:10px 18px;transition:all .4s}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+.intro>*{animation:pin .7s cubic-bezier(.3,1.2,.4,1) both}.intro>*:nth-child(3){animation-delay:.12s}
+body.noanim *,body.noanim *::before{animation:none!important;transition:none!important}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:760px){body{overflow:auto}main{grid-template-columns:1fr;height:auto;padding:16px 12px 96px}nav{left:50%;top:auto;bottom:12px;transform:translateX(-50%);flex-direction:row}}
+</style>
+</head>
+<body>
+<nav class="g" id="nav"><span id="ind"></span></nav>
+<main id="main" class="intro">
+<header>Клиент <b>vpnmux</b></header>
+<section class="g">
+  <h2>Подключение</h2>
+  <div class="pm" id="pm"><button id="pb" aria-haspopup="listbox"><span class="tag" id="pt">Все</span><b id="pn">Все протоколы</b><svg class="i chev" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button><div class="pmenu g" id="pmenu" role="listbox"></div></div>
+  <div class="card" id="cd">
+    <div class="gl" id="gl"><canvas id="cv"></canvas></div>
+    <div class="place" id="pl">—</div><div class="t" id="tm">00:00:00</div><div class="mut" id="st"></div><div class="bar" id="bar" hidden><i></i></div>
+    <div class="row" style="margin-top:14px"><button class="btn" id="go" style="flex:1"></button></div>
+    <div class="mut" id="tr" style="margin-top:10px"></div>
+  </div>
+  
+</section>
+<section class="g" id="pr">
+  <h2>Профили</h2>
+  <div class="drop" id="drop"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg><span>Перетащите .conf или .ovpn сюда</span><button class="btn s" id="bf">Файл</button><button class="btn" id="bp">Добавить</button></div>
+  <div id="ls"></div>
+</section>
+</main>
+<aside id="dr" class="g" aria-label="Оформление">
+  <div class="row"><h2 style="flex:1;margin:0">Оформление</h2><button class="ib" id="dx" aria-label="Закрыть">✕</button></div>
+  <div class="f"><label>Тема</label><div class="seg" id="sTheme"></div></div>
+  <div class="f"><label>Акцентный цвет</label><div class="sw" id="sAc"></div></div>
+  <div class="f"><label>Размытие стекла <span id="vb"></span></label><input type="range" id="rb" min="0" max="40"></div>
+  <div class="f"><label>Скругление <span id="vr"></span></label><input type="range" id="rr" min="6" max="34"></div>
+  <div class="f"><label>Панель навигации</label><div class="seg" id="sNav"></div></div>
+  <div class="f"><label>Анимации</label><div class="seg" id="sAn"></div></div>
+</aside>
+<dialog class="g" id="dlg">
+  <h2>Новый профиль</h2>
+  <div class="seg" id="tabs" style="margin-bottom:14px"></div>
+  <div class="pane on" data-t="awg"><textarea id="ta" placeholder="[Interface]&#10;PrivateKey = …&#10;Jc = 5&#10;…&#10;[Peer]&#10;…" spellcheck="false"></textarea><div class="row" style="margin-top:8px"><button class="btn s" id="bf2">Выбрать .conf</button><span class="mut">AmneziaWG 1.x и 2.0 определяются автоматически</span></div></div>
+  <div class="pane" data-t="hy2"><input class="in" id="hu" placeholder="hysteria2://пароль@host:443/?sni=…#название" spellcheck="false"><div class="mut" style="text-align:left">Ссылка-приглашение Hysteria2 (hysteria2:// или hy2://)</div></div>
+  <div class="pane" data-t="ovpn"><div class="row"><button class="btn s" id="bo">Выбрать .ovpn</button><span class="mut" id="on">файл не выбран</span></div><input class="in" id="ou" placeholder="Логин (если нужен)" style="margin-top:10px"><input class="in" id="op" type="password" placeholder="Пароль"></div>
+  <div class="err" id="er"></div>
+  <div class="row" style="justify-content:flex-end"><button class="btn s" id="dc">Отмена</button><button class="btn" id="di">Добавить</button></div>
+</dialog>
+<div id="toast" class="g"></div>
+<input type="file" id="fi" accept=".conf,.txt,.ovpn" multiple hidden>
+<input type="file" id="fo" accept=".ovpn" hidden>
+<script>
+const $=s=>document.querySelector(s),esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const ls={get(k,d){try{const v=JSON.parse(localStorage.getItem(k));return v??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const IC={shield:'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',list:'M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01',dl:'M12 3v12m0 0l-4-4m4 4l4-4M4 20h16',sun:'M12 8a4 4 0 100 8 4 4 0 000-8zM12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5',tr:'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',cp:'M8 8h12v12H8zM4 16V4h12'};
+const ic=n=>`<svg class="i" viewBox="0 0 24 24"><path d="${IC[n]}"/></svg>`;
+let S={accent:'#12172b',theme:'auto',blur:24,radius:22,anim:true,nav:'side',...ls.get('vm.s',{})};
+const TA=window.__TAURI__,inv=TA&&TA.core&&TA.core.invoke,native=!!inv;
+const PROT={amneziawg:['AmneziaWG 1.x','AWG 1','Обфусцированный WireGuard'],amneziawg2:['AmneziaWG 2.0','AWG 2','Диапазоны H, S3/S4 и CPS-пакеты'],hysteria2:['Hysteria2','HY2','Быстрый туннель поверх QUIC'],openvpn:['OpenVPN','OVPN','Классический TLS-туннель']};
+const DEMO=[{id:'d1',name:'Франкфурт',protocol:'amneziawg2',endpoint:'fra.example.com:51820',lat:50.11,lon:8.68,place:'Frankfurt, Germany'},{id:'d2',name:'Токио',protocol:'hysteria2',endpoint:'tyo.example.com:443',lat:35.68,lon:139.69,place:'Tokyo, Japan'},{id:'d3',name:'Нью-Йорк',protocol:'openvpn',endpoint:'nyc.example.com:1194',lat:40.71,lon:-74.0,place:'New York, USA'},{id:'d4',name:'Сингапур',protocol:'amneziawg',endpoint:'sin.example.com:51820',lat:1.35,lon:103.82,place:'Singapore'}];
+const idle=(p,id)=>({phase:p,message:'',progress:null,since:p=='up'?Date.now():0,id:id||''});
+const sim={s:idle('idle')};
+const api=native?{
+  list:()=>inv('profiles'),save:(name,toml)=>inv('save_profile',{name,toml}),
+  ovpn:(name,ovpn,username,password)=>inv('save_openvpn',{name,ovpn,username,password}),
+  del:id=>inv('delete_profile',{id}),toml:id=>inv('export_toml',{id}),
+  connect:id=>inv('connect',{id}),stop:()=>inv('disconnect'),status:()=>inv('status'),me:()=>inv('my_location')
+}:{
+  list:async()=>ls.get('vm.demo',DEMO),
+  save:async(name,t)=>{const g=k=>(t.match(new RegExp('^'+k+' = "([^"]*)"','m'))||[])[1]||'';const ep=g('endpoint')||g('server'),hh=[...ep].reduce((a,c)=>(a*31+c.charCodeAt(0))>>>0,7);const p={id:'p'+Date.now(),name,protocol:g('protocol'),endpoint:ep,lat:hh%120-60,lon:hh*7%340-170,place:'Демо-координаты'};const l=ls.get('vm.demo',DEMO);l.unshift(p);ls.set('vm.demo',l);return p},
+  ovpn:async(name,t)=>{const m=t.match(/^remote\s+(\S+)\s+(\d+)/m);if(!m)throw 'В .ovpn нет строки remote';return api.save(name,`protocol = "openvpn"\nendpoint = "${m[1]}:${m[2]}"\n`)},
+  del:async id=>{ls.set('vm.demo',ls.get('vm.demo',DEMO).filter(p=>p.id!=id))},
+  toml:async()=>'# В демо-режиме конфиги не сохраняются',
+  connect:async id=>{clearInterval(sim.i);let n=0;sim.s={...idle('downloading',id),message:'Загрузка компонента…',progress:0};sim.i=setInterval(()=>{n+=25;if(n<100){sim.s.progress=n;return}clearInterval(sim.i);sim.s={...idle('connecting',id),message:'Подключение…'};setTimeout(()=>{if(sim.s.phase=='connecting')sim.s=idle('up',id)},900)},300)},
+  stop:async()=>{clearInterval(sim.i);sim.s=idle('stopped')},
+  status:async()=>sim.s,
+  me:async()=>[52.52,13.4,'Berlin, Germany']
+};
+let P=[],sel=null,proto='all',cs=idle('idle'),stopping=false,poll=null,me=null;
+/* ---------- parser ---------- */
+function parseConf(t,fn){
+  const sec={};let cur=null;
+  for(let l of t.split(/\r?\n/)){l=l.trim();if(!l||l[0]=='#'||l[0]==';')continue;
+    const m=l.match(/^\[(\w+)\]$/);if(m){cur=m[1].toLowerCase();sec[cur]=sec[cur]||{};continue}
+    const i=l.indexOf('=');if(i<0||!cur)continue;sec[cur][l.slice(0,i).trim().toLowerCase()]=l.slice(i+1).trim()}
+  const I=sec.interface,R=sec.peer;
+  if(!I||!R)throw Error('Нужны разделы [Interface] и [Peer].');
+  if(!I.privatekey||!R.publickey||!R.endpoint)throw Error('Не хватает PrivateKey, PublicKey или Endpoint.');
+  const o={};['jc','jmin','jmax','s1','s2','s3','s4','h1','h2','h3','h4','i1','i2','i3','i4','i5'].forEach(k=>{if(I[k]!==undefined)o[k]=I[k]});
+  if(!('jc' in o||'s1' in o||'h1' in o))throw Error('Это обычный WireGuard: параметров AmneziaWG не найдено.');
+  const v2=['s3','s4','i1','i2','i3','i4','i5'].some(k=>k in o)||/-/.test(['h1','h2','h3','h4'].map(k=>o[k]||'').join(''));
+  if(+o.jmin>+o.jmax)throw Error('Jmin не может быть больше Jmax.');
+  if(+o.s1+56===+o.s2)throw Error('S1 + 56 не должно равняться S2.');
+  const nm=(fn||'').replace(/\.(conf|txt)$/i,'')||R.endpoint.replace(/:\d+$/,'');
+  return{id:'p'+Date.now()+Math.random().toString(16).slice(2,6),name:nm,ver:v2?2:1,addr:I.address||'',dns:I.dns||'',mtu:I.mtu,ep:R.endpoint,pub:R.publickey,ka:R.persistentkeepalive,allowed:R.allowedips,priv:I.privatekey,psk:R.presharedkey,o};
+}
+function toml(p){
+  const q=v=>/^\d+$/.test(v)?v:JSON.stringify(v),a=s=>'['+s.split(',').filter(Boolean).map(x=>JSON.stringify(x.trim()))+']';
+  let s=`protocol = "amneziawg${p.ver==2?'2':''}"\nprivate_key = "${p.priv||'ВСТАВЬТЕ_PRIVATE_KEY'}"\naddress = ${a(p.addr)}\n`;
+  if(p.dns)s+=`dns = ${a(p.dns)}\n`;if(p.mtu)s+=`mtu = ${p.mtu}\n`;
+  s+=`\n[peer]\npublic_key = "${p.pub}"\nendpoint = "${p.ep}"\n`;if(p.allowed)s+=`allowed_ips = ${a(p.allowed)}\n`;if(p.psk)s+=`preshared_key = "${p.psk}"\n`;if(p.ka)s+=`persistent_keepalive = ${p.ka}\n`;
+  return s+'\n[obfuscation]\n'+Object.entries(p.o).map(([k,v])=>`${k} = ${q(v)}`).join('\n')+'\n';
+}
+/* ---------- render ---------- */
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3200)}
+const ACT=['starting','downloading','connecting','up'],act=()=>ACT.includes(cs.phase),cur=()=>P.find(p=>p.id==(act()?cs.id:sel))||null,fm=n=>String(n).padStart(2,'0');
+function draw(){
+  const list=P.filter(p=>proto=='all'||p.protocol==proto),n=k=>P.filter(p=>k=='all'||p.protocol==k).length;
+  $('#pn').textContent=proto=='all'?'Все протоколы':PROT[proto][0];$('#pt').textContent=proto=='all'?'Все':PROT[proto][1];
+  $('#pmenu').innerHTML=[['all','Все протоколы','Любой тип туннеля'],...Object.entries(PROT).map(([k,v])=>[k,v[0],v[2]])].map(([k,t,d])=>`<button role="option" data-p="${k}" class="${proto==k?'on':''}"><span class="tag">${k=='all'?'Все':PROT[k][1]}</span><span style="flex:1"><b>${t}</b><small>${d}</small></span><span class="cnt">${n(k)}</span></button>`).join('');
+  const cid=act()?cs.id:sel;
+  $('#ls').innerHTML=list.length?list.map((p,i)=>`<div class="p ${p.id==cid?'sel':''}" data-id="${esc(p.id)}" style="animation-delay:${i*50}ms"><span class="tag">${PROT[p.protocol]?PROT[p.protocol][1]:esc(p.protocol)}</span><div class="grow"><div class="nm">${esc(p.name)}</div><div class="mut" style="text-align:left">${esc(p.place||p.endpoint)}</div></div>${act()&&cs.id==p.id?'<span class="dot"></span>':''}<button class="ib" data-a="cp" title="Скопировать TOML (секреты скрыты)">${ic('cp')}</button><button class="ib" data-a="rm" title="Удалить">${ic('tr')}</button></div>`).join(''):`<div class="empty">Профилей этого типа пока нет.<br>Нажмите «Добавить» или перетащите файл сюда.</div>`;
+  const p=cur(),up=cs.phase=='up',busy=stopping||(act()&&!up),nm=p&&PROT[p.protocol]?PROT[p.protocol][0]:'';
+  $('#cd').className='card '+(up?'up':busy?'busy':'');
+  $('#pl').textContent=p?(p.place||p.endpoint):'Выберите профиль';
+  $('#st').textContent=stopping?'Отключение…':up?`Подключено, ${nm}`:act()?(cs.message||'Подключение…'):cs.phase=='error'?'Ошибка: '+cs.message:p?`Готов: ${p.name}, ${nm}`:'Добавьте профиль';
+  $('#go').textContent=stopping?'Отключение…':act()?'Отключить':'Подключиться';
+  $('#go').disabled=stopping||(!act()&&!sel);
+  $('#tr').textContent=p?p.endpoint:'';
+  const b=$('#bar');b.hidden=!(cs.phase=='downloading'&&cs.progress!=null);b.style.setProperty('--p',(cs.progress||0)+'%');
+}
+function tick(){const s=cs.phase=='up'&&cs.since?Math.max(0,Date.now()-cs.since)/1000|0:0;$('#tm').textContent=`${fm(s/3600|0)}:${fm(s/60%60|0)}:${fm(s%60)}`}
+async function refresh(){try{P=await api.list()}catch(e){P=[];toast(String(e))}if(!P.some(p=>p.id==sel))sel=(P.find(p=>proto=='all'||p.protocol==proto)||P[0]||{}).id||null;draw()}
+async function pollStatus(){
+  clearTimeout(poll);
+  try{cs=await api.status()}catch(e){cs={...idle('error'),message:String(e)}}
+  if(stopping&&!act())stopping=false;
+  if(cs.phase=='error')toast(cs.message||'Ошибка туннеля');
+  draw();tick();
+  if(act()||stopping)poll=setTimeout(pollStatus,700);
+}
+async function toggle(){
+  if(act()){stopping=true;draw();try{await api.stop()}catch(e){toast(String(e))}pollStatus();return}
+  if(!sel)return;
+  cs={...idle('starting',sel),message:native?'Запрос прав администратора…':'Запуск…'};draw();
+  try{await api.connect(sel)}catch(e){cs=idle('idle');draw();toast(String(e));return}
+  pollStatus();
+}
+/* ---------- customization ---------- */
+const AC=['#12172b','#0f766e','#5b43d6','#c2410c','#be185d'];
+function seg(id,opts,key,fn){const el=$(id);el.innerHTML=opts.map(([v,l])=>`<button data-v="${v}" class="${S[key]==v?'on':''}">${l}</button>`).join('');el.onclick=e=>{const b=e.target.closest('button');if(!b)return;S[key]=b.dataset.v==='true'?true:b.dataset.v==='false'?false:b.dataset.v;apply();fn&&fn()}}
+function apply(){
+  const r=document.documentElement;r.dataset.theme=S.theme;r.style.setProperty('--ac',S.accent);r.style.setProperty('--blur',S.blur+'px');r.style.setProperty('--r',S.radius+'px');
+  document.body.classList.toggle('noanim',!S.anim);$('#nav').classList.toggle('bottom',S.nav=='bottom');$('#main').classList.toggle('bottom',S.nav=='bottom');
+  $('#vb').textContent=S.blur;$('#vr').textContent=S.radius;$('#rb').value=S.blur;$('#rr').value=S.radius;
+  seg('#sTheme',[['auto','Авто'],['light','Светлая'],['dark','Тёмная']],'theme');
+  seg('#sNav',[['side','Сбоку'],['bottom','Снизу']],'nav',()=>setTimeout(moveInd,520));
+  seg('#sAn',[[true,'Вкл'],[false,'Выкл']],'anim');
+  $('#sAc').innerHTML=AC.map(c=>`<button style="--c:${c}" data-c="${c}" class="${S.accent==c?'on':''}" aria-label="${c}"></button>`).join('')+`<input type="color" value="${S.accent}" id="cc" aria-label="Свой цвет" style="width:30px;height:30px;border:0;background:none">`;
+  ls.set('vm.s',S);
+}
+/* ---------- nav ---------- */
+const NAV=[['shield','Подключение'],['list','Профили'],['dl','Добавить профиль'],['sun','Оформление']];
+$('#nav').insertAdjacentHTML('beforeend',NAV.map(([i,t],k)=>`<button data-n="${k}" aria-label="${t}" title="${t}">${ic(i)}</button>`).join(''));
+let navOn=0;
+function moveInd(){const b=$('#nav').children[navOn+1],ind=$('#ind');ind.style.left=b.offsetLeft+'px';ind.style.top=b.offsetTop+'px';ind.style.transform='none';[...$('#nav').children].forEach((x,i)=>x.classList.toggle('on',i==navOn+1))}
+$('#nav').onclick=e=>{const b=e.target.closest('button');if(!b)return;const n=+b.dataset.n;navOn=n;moveInd();
+  if(n==0)$('#cd').scrollIntoView({behavior:'smooth'});if(n==1)$('#pr').scrollIntoView({behavior:'smooth'});
+  if(n==2)openDlg();if(n==3)$('#dr').classList.add('open')}
+/* ---------- events ---------- */
+const TABS=[['awg','AmneziaWG'],['hy2','Hysteria2'],['ovpn','OpenVPN']],T2={amneziawg:'awg',amneziawg2:'awg',hysteria2:'hy2',openvpn:'ovpn'};
+let tab='awg',ovf=null;
+function renderTabs(){$('#tabs').innerHTML=TABS.map(([k,l])=>`<button data-t="${k}" class="${tab==k?'on':''}">${l}</button>`).join('');document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('on',p.dataset.t==tab))}
+function openDlg(t){tab=t||T2[proto]||'awg';renderTabs();$('#er').textContent='';$('#dlg').showModal()}
+async function added(r){sel=r.id;if(proto!='all'&&proto!=r.protocol)proto=r.protocol;await refresh();toast(`Добавлено: ${r.name}, ${PROT[r.protocol]?PROT[r.protocol][0]:r.protocol}`)}
+const addConf=async(t,f)=>{const p=parseConf(t,f);return added(await api.save(p.name,toml(p)))};
+const addOvpn=async(t,f,u,pw)=>added(await api.ovpn(f.replace(/\.ovpn$/i,''),t,u||null,pw||null));
+function hy2Toml(u){
+  let url;try{url=new URL(u.trim().replace(/^hy2:/i,'hysteria2:'))}catch(e){throw Error('Некорректная ссылка Hysteria2.')}
+  if(url.protocol!=='hysteria2:'||!url.hostname)throw Error('Ссылка должна начинаться с hysteria2:// или hy2://');
+  const q=url.searchParams,auth=decodeURIComponent(url.username)+(url.password?':'+decodeURIComponent(url.password):'');
+  if(!decodeURIComponent(url.username))throw Error('В ссылке нет пароля (hysteria2://пароль@host:port).');
+  const s=v=>JSON.stringify(v);let t=`protocol = "hysteria2"\nserver = ${s(url.hostname+':'+(url.port||443))}\npassword = ${s(auth)}\n`;
+  if(q.get('sni'))t+=`sni = ${s(q.get('sni'))}\n`;
+  if(q.get('insecure')=='1')t+='insecure = true\n';
+  if(q.get('pinSHA256'))t+=`pin_sha256 = ${s(q.get('pinSHA256'))}\n`;
+  if(q.get('obfs-password'))t+=`obfs_password = ${s(q.get('obfs-password'))}\n`;
+  return{name:decodeURIComponent(url.hash.slice(1))||url.hostname,toml:t};
+}
+async function importFiles(fs){for(const f of fs){try{const t=await f.text();/\.ovpn$/i.test(f.name)?await addOvpn(t,f.name):await addConf(t,f.name)}catch(e){toast(f.name+': '+(e.message||e))}}}
+async function doImp(){
+  const er=$('#er');er.textContent='';
+  try{
+    if(tab=='awg'){const t=$('#ta').value;if(!t.trim())throw Error('Вставьте содержимое .conf или выберите файл.');await addConf(t,'');$('#ta').value=''}
+    else if(tab=='hy2'){const r=hy2Toml($('#hu').value);await added(await api.save(r.name,r.toml));$('#hu').value=''}
+    else{if(!ovf)throw Error('Выберите файл .ovpn.');await addOvpn(ovf.text,ovf.name,$('#ou').value,$('#op').value);ovf=null;$('#on').textContent='файл не выбран'}
+    $('#dlg').close();
+  }catch(x){er.textContent=x.message||String(x)}
+}
+document.addEventListener('click',async e=>{
+  if(!e.target.closest('#pm'))$('#pm').classList.remove('open');
+  if(e.target.closest('#pb')){$('#pm').classList.toggle('open');return}
+  const pi=e.target.closest('[data-p]');
+  if(pi){proto=pi.dataset.p;$('#pm').classList.remove('open');const f=P.find(p=>proto=='all'||p.protocol==proto);if(f&&!act())sel=f.id;draw();return}
+  const a=e.target.closest('[data-a]'),row=e.target.closest('.p');
+  if(a&&row){e.stopPropagation();const id=row.dataset.id;
+    if(a.dataset.a=='rm'){if(act()&&cs.id==id)await toggle();try{await api.del(id)}catch(x){toast(String(x))}await refresh()}
+    else{try{await navigator.clipboard.writeText(await api.toml(id));toast('TOML скопирован (секреты скрыты)')}catch(x){toast('Не удалось скопировать')}}
+    return}
+  if(row&&!act()){sel=row.dataset.id;draw()}
+  const c=e.target.closest('#sAc [data-c]');if(c){S.accent=c.dataset.c;apply()}
+});
+$('#tabs').onclick=e=>{const b=e.target.closest('button');if(b){tab=b.dataset.t;renderTabs()}};
+$('#sAc').addEventListener('input',e=>{if(e.target.id=='cc'){S.accent=e.target.value;document.documentElement.style.setProperty('--ac',S.accent);ls.set('vm.s',S)}});
+$('#rb').oninput=e=>{S.blur=+e.target.value;apply()};$('#rr').oninput=e=>{S.radius=+e.target.value;apply();moveInd()};
+$('#go').onclick=toggle;$('#dx').onclick=()=>{$('#dr').classList.remove('open');navOn=0;moveInd()};
+$('#bp').onclick=()=>openDlg();$('#bf').onclick=$('#bf2').onclick=()=>$('#fi').click();
+$('#fi').onchange=e=>{importFiles(e.target.files);e.target.value='';if($('#dlg').open)$('#dlg').close()};
+$('#bo').onclick=()=>$('#fo').click();
+$('#fo').onchange=async e=>{const f=e.target.files[0];if(f){ovf={name:f.name,text:await f.text()};$('#on').textContent=f.name}e.target.value=''};
+$('#dc').onclick=()=>$('#dlg').close();$('#di').onclick=doImp;
+$('#ta').onkeydown=e=>{if(e.key=='Enter'&&(e.ctrlKey||e.metaKey))doImp()};
+const dz=$('#drop');
+['dragenter','dragover'].forEach(v=>addEventListener(v,e=>{e.preventDefault();dz.classList.add('over')}));
+['dragleave','drop'].forEach(v=>addEventListener(v,e=>{e.preventDefault();if(v=='drop'||e.target==document.documentElement)dz.classList.remove('over')}));
+addEventListener('drop',e=>{if(e.dataTransfer&&e.dataTransfer.files.length)importFiles(e.dataTransfer.files)});
+addEventListener('resize',moveInd);
+
+/* ---------- 3D-глобус из точек ---------- */
+const LAND_RLE='180,90;610,6,148,13,1,21,145,9,2,25,155,25,60,3,95,23,53,11,72,1,10,2,11,19,45,25,41,3,17,8,1,4,3,8,7,17,46,40,23,21,4,24,6,13,23,6,15,60,7,41,1,10,5,9,24,8,6,69,8,39,4,7,6,6,8,5,13,5,2,77,8,37,20,4,25,5,2,77,10,36,7,4,12,2,24,6,2,75,14,4,6,23,8,7,35,2,1,3,3,59,8,2,19,1,12,21,7,8,28,2,5,1,1,2,3,59,8,3,33,25,2,9,27,3,4,1,5,59,9,3,34,25,1,10,24,2,1,3,2,66,9,1,38,34,1,2,24,72,48,32,1,3,25,71,48,30,31,70,49,30,31,16,4,5,2,42,50,27,31,5,5,1,2,5,6,4,3,40,3,2,46,26,32,5,6,1,2,15,2,38,5,1,47,25,33,4,10,2,1,12,2,32,4,1,6,1,48,23,34,3,6,1,8,11,2,34,2,1,4,3,49,22,35,8,13,41,7,3,52,20,35,11,11,42,5,1,56,17,36,21,1,44,63,9,6,1,34,30,2,35,62,1,1,6,8,1,33,24,1,7,3,32,66,5,42,32,6,28,68,4,41,26,1,10,5,23,70,5,3,1,4,2,29,28,1,9,7,7,3,8,74,4,3,1,36,27,1,8,8,6,5,6,77,6,36,27,2,6,10,4,6,7,6,1,72,5,34,28,1,4,12,3,9,5,6,2,74,2,34,29,17,2,9,1,1,3,83,1,5,3,26,33,13,2,9,1,2,2,84,2,2,8,23,32,24,1,91,10,23,30,16,1,9,1,10,2,78,13,22,3,4,21,26,1,7,1,82,13,31,18,25,2,1,1,4,3,82,14,30,17,27,2,4,3,3,1,78,16,28,17,29,2,3,3,82,18,27,15,31,1,4,2,2,1,6,4,69,22,24,14,32,1,15,5,67,22,24,14,33,1,15,5,67,21,24,14,52,3,66,21,24,14,51,1,70,19,25,14,4,1,40,3,3,1,70,18,26,14,3,2,37,6,3,2,70,17,26,13,4,2,36,8,1,3,71,16,26,12,4,2,36,14,71,15,27,11,4,2,34,17,70,13,29,11,4,2,33,19,69,12,30,10,40,20,67,12,31,10,40,20,67,11,33,8,41,20,67,11,34,6,42,20,67,10,35,5,43,6,3,10,68,7,97,8,10,1,57,7,99,5,12,1,55,6,118,1,55,5,105,1,12,2,55,4,106,1,11,1,57,4,117,1,58,3,177,4,176,3,178,2,1324,35,125,65,65,125,5,1620';
+const G={lon:10,lat:20,hold:0,drag:0,t:0,pts:[]};
+const rad=Math.PI/180,vec=(la,lo)=>[Math.cos(la*rad)*Math.sin(lo*rad),Math.sin(la*rad),Math.cos(la*rad)*Math.cos(lo*rad)];
+(function(){const[d,r]=LAND_RLE.split(';'),[W,H]=d.split(',').map(Number),m=new Uint8Array(W*H);let i=0,v=0;
+  r.split(',').forEach(n=>{n=+n;if(v)m.fill(1,i,i+n);i+=n;v^=1});
+  const land=(la,lo)=>m[Math.min(H-1,Math.max(0,Math.floor((90-la)/180*H)))*W+(((Math.floor((lo+180)/360*W))%W)+W)%W];
+  const st=2.6;for(let la=-86;la<=86;la+=st){const n=Math.max(1,Math.round(360*Math.cos(la*rad)/st));for(let k=0;k<n;k++){const lo=-180+(k+.5)*360/n;if(land(la,lo))G.pts.push(vec(la,lo))}}})();
+function rot(v){const l=G.lon*rad,p=G.lat*rad,c=Math.cos(l),s=Math.sin(l),x1=v[0]*c-v[2]*s,z1=v[0]*s+v[2]*c,cp=Math.cos(p),sp=Math.sin(p);return[x1,v[1]*cp-z1*sp,v[1]*sp+z1*cp]}
+const curT=()=>{const p=cur();return p&&p.lat!=null?{lat:p.lat,lon:p.lon}:null};
+function pin(x,v,cx,cy,R,col,ts,pulse){const[a,b,c]=rot(v);if(c<=.02)return;const sx=cx+R*a,sy=cy-R*b;
+  if(pulse){const k=(ts/1400)%1;x.globalAlpha=1-k;x.strokeStyle=col;x.lineWidth=2;x.beginPath();x.arc(sx,sy,4+k*16,0,6.2832);x.stroke()}
+  x.globalAlpha=1;x.fillStyle=col;x.beginPath();x.arc(sx,sy,4,0,6.2832);x.fill();x.strokeStyle='#fff';x.lineWidth=1.5;x.stroke()}
+function frame(ts){
+  requestAnimationFrame(frame);
+  const cv=$('#cv'),box=cv.parentElement,w=box.clientWidth,h=box.clientHeight;if(!w||!h)return;
+  const dpr=devicePixelRatio||1;if(cv.width!=Math.round(w*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr)}
+  const x=cv.getContext('2d'),dt=Math.min(50,ts-(G.t||ts));G.t=ts;
+  x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,w,h);
+  const R=Math.min(w,h)*.43,cx=w/2,cy=h/2,ink=getComputedStyle(document.documentElement).getPropertyValue('--ink').trim()||'#141a2e';
+  const an=S.anim&&!matchMedia('(prefers-reduced-motion:reduce)').matches,t=curT(),spin=act()&&cs.phase!='up';
+  if(!G.drag&&ts>=G.hold){
+    if(spin&&an)G.lon+=dt*.045;
+    else if(t){const k=an?Math.min(1,dt*.005):1,d=((t.lon-G.lon+540)%360)-180;G.lon+=d*k;G.lat+=(t.lat*.6+6-G.lat)*k}
+    else if(an)G.lon+=dt*.01;
+  }
+  const g=x.createRadialGradient(cx-R*.35,cy-R*.35,R*.1,cx,cy,R);g.addColorStop(0,'rgba(255,255,255,.5)');g.addColorStop(1,'rgba(255,255,255,.05)');
+  x.beginPath();x.arc(cx,cy,R,0,6.2832);x.fillStyle=g;x.fill();x.lineWidth=1;x.strokeStyle='rgba(255,255,255,.55)';x.stroke();
+  x.fillStyle=ink;
+  for(const v of G.pts){const[a,b,c]=rot(v),sx=cx+R*a,sy=cy-R*b,s=c>0?2:1.4;x.globalAlpha=c>0?.25+.6*c:.06;x.fillRect(sx-s/2,sy-s/2,s,s)}
+  x.globalAlpha=1;
+  const A=me&&vec(me.lat,me.lon),B=t&&vec(t.lat,t.lon);
+  if(A&&B&&act()){
+    const om=Math.acos(Math.max(-1,Math.min(1,A[0]*B[0]+A[1]*B[1]+A[2]*B[2])));
+    if(om>.02){x.beginPath();let pen=false;const k=Math.sin(om);
+      for(let i=0;i<=56;i++){const u=i/56,m1=Math.sin((1-u)*om)/k,m2=Math.sin(u*om)/k,hh=1+.32*Math.sin(Math.PI*u)*Math.min(1,om/1.3),r=rot([(m1*A[0]+m2*B[0])*hh,(m1*A[1]+m2*B[1])*hh,(m1*A[2]+m2*B[2])*hh]);
+        if(r[2]>0){const X=cx+R*r[0],Y=cy-R*r[1];pen?x.lineTo(X,Y):x.moveTo(X,Y);pen=true}else pen=false}
+      x.strokeStyle='#2fb67c';x.lineWidth=2;x.setLineDash([5,6]);x.lineDashOffset=an?-ts/50:0;x.stroke();x.setLineDash([])}
+  }
+  if(A)pin(x,A,cx,cy,R,ink,ts,0);
+  if(B)pin(x,B,cx,cy,R,'#2fb67c',ts,an&&act()?1:0);
+}
+(function(){const el=$('#gl');let lx,ly;
+  el.onpointerdown=e=>{G.drag=1;lx=e.clientX;ly=e.clientY;el.setPointerCapture(e.pointerId);el.style.cursor='grabbing'};
+  el.onpointermove=e=>{if(!G.drag)return;G.lon-=(e.clientX-lx)*.4;G.lat=Math.max(-80,Math.min(80,G.lat+(e.clientY-ly)*.4));lx=e.clientX;ly=e.clientY};
+  el.onpointerup=el.onpointercancel=()=>{G.drag=0;G.hold=performance.now()+4000;el.style.cursor='grab'}})();
+
+/* ---------- init ---------- */
+apply();
+(async()=>{
+  await refresh();
+  api.me().then(r=>{if(r)me={lat:r[0],lon:r[1]}}).catch(()=>{});
+  await pollStatus();
+  if(!native)toast('Демо-режим: туннель симулируется. Реальное подключение — в приложении vpnmux.');
+})();
+setInterval(tick,1000);requestAnimationFrame(frame);
+requestAnimationFrame(moveInd);document.fonts&&document.fonts.ready.then(moveInd);
+</script>
+</body>
+</html>
